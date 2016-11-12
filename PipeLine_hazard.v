@@ -1,5 +1,24 @@
 
 `timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date:    08:46:04 11/04/2016 
+// Design Name: 
+// Module Name:    datahazard 
+// Project Name: 
+// Target Devices: 
+// Tool versions: 
+// Description: 
+//
+// Dependencies: 
+//
+// Revision: 
+// Revision 0.01 - File Created
+// Additional Comments: 
+//
+//////////////////////////////////////////////////////////////////////////////////
 
 module D_ff_IM(input clk, input reset, input d, output reg q);
 	always@(reset or negedge clk)
@@ -454,50 +473,36 @@ input p2_regWr, input p3_regWr,input p4_regWr, output reg [1:0] fwdA, output reg
 	always@(p1_rs or p1_rt or p2_destReg or p3_destReg or p4_destReg or p2_regWr or p3_regWr or p4_regWr)
 	begin
 	
-		if(p2_destReg == p1_rs)
+		fwdA = 2'b00;
+		fwdB = 2'b00;
+
+	
+		if(p2_destReg == p1_rs && p2_regWr)
 		begin
 			fwdA  = 2'b01;
-			fwdB  = 2'b00;
 		end
-		if(p2_destReg == p1_rt)
+		if(p2_destReg == p1_rt && p2_regWr)
 		begin
-			fwdA  = 2'b00;
 			fwdB  = 2'b01;
 		end
-		if(p3_destReg == p1_rs)
+		if((p3_destReg == p1_rs && p3_regWr ) &&  !(p2_destReg == p1_rs && p2_regWr))
 		begin	
 			fwdA  = 2'b10;
-			fwdB  = 2'b00;
-		
 		end
-		if (p3_destReg == p1_rt)
+		if ((p3_destReg == p1_rt && p3_regWr )&&  !(p2_destReg == p1_rt && p2_regWr))
 		begin
-			fwdA  = 2'b00;
 			fwdB  = 2'b10;			
 
 		end
-		if(p4_destReg == p1_rs)
+		if((p4_destReg == p1_rs && p4_regWr ) &&  !(p3_destReg == p1_rs && p3_regWr) && !(p2_destReg == p1_rs && p2_regWr))
 		begin
 				fwdA  = 2'b11;
-				fwdB  = 2'b00;	
-		
 		end
-		if(p4_destReg == p1_rt)
+		if((p4_destReg == p1_rt && p4_regWr ) &&  !(p3_destReg == p1_rt && p3_regWr) && !(p2_destReg == p1_rt && p2_regWr))
 		begin
-				fwdA  = 2'b00;
 				fwdB  = 2'b11;	
-				
-		
-		end
-		
-		
-		
+		end		
 	end
-	
-	
-	
-	
-	
 endmodule
 
 //TopModule
@@ -538,7 +543,7 @@ module pipelinehazards(input clk, input reset, output [15:0] Result );
 	wire [2:0] destReg;
 	
 	ID_EX1 pipe2(clk,reset,1'b1,outR0,outR1,ZeroExtOffset,p0_intr[11:9],p0_intr[8:6],p0_intr[5:3], 
-	p0_intr[15:12],aluSrcB,aluOp,regDest,toReg,regWr,p1_regOut1,p1_regOut2,p1_zExtOut,
+	p0_intr[15:12],m1out[5],m1out[4:3],m1out[2],m1out[1],m1out[0],p1_regOut1,p1_regOut2,p1_zExtOut,
 	p1_inst_Rs,p1_inst_Rt,p1_inst_Rd,p1_opcode,p1_aluSrcB,p1_aluOp,p1_regDest,p1_toReg,p1_regWr);
 	
 	wire [15:0] p2_aluOut,p4_result,maOut,mbOut,aluIn,aluOut;
@@ -563,18 +568,15 @@ module pipelinehazards(input clk, input reset, output [15:0] Result );
 	 zeroExt1to16 zeroExt2(p2_carryOut, zeroExtcFlag);
 	 adder addme(zeroExtcFlag,p2_aluOut, addmeOut);
 	 
-	  EX2_WB pipe4(clk,reset,1'b1,p2_aluOut,addmeOut,p2_destReg,p2_toReg,p2_regWr,p3_aluOut,p3_adderOut,
-p3_destReg,p3_toReg,p3_regWr);
+	  EX2_WB pipe4(clk,reset,1'b1,p2_aluOut,addmeOut,p2_destReg,p2_toReg,p2_regWr,p3_aluOut,p3_adderOut,p3_destReg,p3_toReg,p3_regWr);
 
-mux2to1_16bits mfinal(p3_adderOut, p3_aluOut, p3_toReg, Result);
+		mux2to1_16bits mfinal(p3_adderOut, p3_aluOut, p3_toReg, Result);
 	 
 	 
-	 wire [2:0] p4_destReg;
-	 wire p4_regWr;
-	WB pipe5(clk, reset,1'b1,Result,p3_destReg,p3_regWr,p4_result,
-	p4_destReg,p4_regWr); 
-	forward F1(p1_inst_Rs, p1_inst_Rt, p2_destReg, p3_destReg, p4_destReg,
-					p2_regWr, p3_regWr,p4_regWr,fwA, fwB);
+		wire [2:0] p4_destReg;
+		wire p4_regWr;
+	WB pipe5(clk, reset,1'b1,Result,p3_destReg,p3_regWr,p4_result,p4_destReg,p4_regWr); 
+	forward F1(p1_inst_Rs, p1_inst_Rt, p2_destReg, p3_destReg, p4_destReg,p2_regWr, p3_regWr,p4_regWr,fwA, fwB);
 		
 endmodule
 
@@ -590,7 +592,7 @@ module pipelinehazardsTestBench;
 	initial
 	begin
 		clk=0; reset=1;
-		#10  reset=0;	
+		#10   reset=0;	
 		
 		#150 $finish; 
 	end
